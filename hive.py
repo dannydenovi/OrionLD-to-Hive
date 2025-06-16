@@ -59,20 +59,6 @@ queries = [
         ORDER BY hour_bucket
     """),
     ("50_3.txt", """
-        SELECT r1.hour, r1.avg_temp as room1_temp, r2.avg_temp as room2_temp
-        FROM (
-            SELECT hour(ts) as hour, AVG(CAST(temperature AS DOUBLE)) as avg_temp
-            FROM room1_data
-            GROUP BY hour(ts)
-        ) r1
-        JOIN (
-            SELECT hour(ts) as hour, AVG(CAST(temperature AS DOUBLE)) as avg_temp
-            FROM room2_data
-            GROUP BY hour(ts)
-        ) r2
-        ON r1.hour = r2.hour
-    """),
-    ("50_4.txt", """
 SELECT 
   tab.room,
   HOUR(tab.ts) AS hour,
@@ -94,6 +80,20 @@ FROM (
   SELECT 'toilet', entityid, temperature, humidity, brightness, ts FROM toilet_data
 ) tab
 GROUP BY CUBE (tab.room, HOUR(tab.ts))
+    """),
+    ("50_4.txt", """
+        SELECT r1.hour, r1.avg_temp as room1_temp, r2.avg_temp as room2_temp
+        FROM (
+            SELECT hour(ts) as hour, AVG(CAST(temperature AS DOUBLE)) as avg_temp
+            FROM room1_data
+            GROUP BY hour(ts)
+        ) r1
+        JOIN (
+            SELECT hour(ts) as hour, AVG(CAST(temperature AS DOUBLE)) as avg_temp
+            FROM room2_data
+            GROUP BY hour(ts)
+        ) r2
+        ON r1.hour = r2.hour
 
 """)
 ]
