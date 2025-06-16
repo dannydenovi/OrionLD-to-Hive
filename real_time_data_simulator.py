@@ -7,9 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 ORION_LD_URL = "http://localhost:1026/ngsi-ld/v1/entities/"
 HEADERS = {"Content-Type": "application/ld+json"}
-DELAY = 2
+DELAY = 0.25
 MAX_PERCENT_PER_THREAD = 0.25 
 last_room = None
+update_counts = {}
 
 def create_entity_if_absent(room, context):
     entity_id = f"urn:ngsi-ld:{room}:{room}"
@@ -86,6 +87,9 @@ def send_patch(room, context, timestamp, value):
         else:
             print(f"[{room}] PATCH {context_attr} = {value} @ {timestamp.isoformat()}")
             print(f"🔗 Visualizza: {ORION_LD_URL}{entity_id}?options=keyValues")
+            update_counts[room] = update_counts.get(room, 0) + 1
+            print(f"[{room}] 🔢 Contatore aggiornamenti (in memoria): {update_counts[room]}")
+
     except requests.exceptions.HTTPError as e:
         print(f"[{room}] Errore HTTP PATCH: {e} (status: {r.status_code})")
         print(f"→ Risposta Orion: {r.text}")
@@ -144,8 +148,16 @@ def simulate_file_stream(file_path):
             except Exception as e:
                 print(f"[{filename}] Errore parsing riga {line_number}: {e}")
 
+    table_name = f"{room.lower()}_data"
+    count_rows_in_hbase(table_name, room)
+
 def simulate_all(folder="./Measurements"):
     files = glob.glob(os.path.join(folder, "*.csv"))
+    from collections import defaultdict
+    room_files = defaultdict(list)
+    for file in files:
+        room = os.path.basename(file).split("_")[0]
+        room_files[room].append(file)
 
     existing_attrs = set()
 
@@ -158,8 +170,48 @@ def simulate_all(folder="./Measurements"):
             create_entity_if_absent(room, context)
             existing_attrs.add(key)
 
-    with ThreadPoolExecutor(max_workers=len(files)) as executor:
-        executor.map(simulate_file_stream, files)
+    def simulate_room_stream(room, file_list):
+        open_files = []
+        for file_path in file_list:
+            with open(file_path, "r") as f:
+                lines = [line.strip() for line in f if line.strip()]
+                max_lines = int(len(lines) * MAX_PERCENT_PER_THREAD)
+                open_files.append(iter(lines[:max_lines]))
+
+        more_data = True
+        while more_data:
+            more_data = False
+            for i, line_iter in enumerate(open_files):
+                try:
+                    line = next(line_iter)
+                    context = os.path.basename(file_list[i]).split("_", 1)[1].replace(".csv", "")
+                    parts = line.split("\t")
+                    if len(parts) != 2:
+                        print(f"[{room}] Riga malformata: '{line}'")
+                        continue
+                    ts = datetime.now(timezone.utc)
+                    val = float(parts[1])
+                    send_patch(room, context, ts, val)
+                    time.sleep(1)
+                    more_data = True
+                except StopIteration:
+                    continue
+
+    # Assign rooms to threads
+    thread_rooms = [
+        ["Kitchen", "Room1"],
+        ["Room2", "Room3"],
+        ["Bathroom", "Toilet"]
+    ]
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = []
+        for room_group in thread_rooms:
+            files_subset = {room: room_files[room] for room in room_group if room in room_files}
+            for room, file_list in files_subset.items():
+                futures.append(executor.submit(simulate_room_stream, room, file_list))
+        for future in futures:
+            future.result()
 
 if __name__ == "__main__":
     simulate_all()
