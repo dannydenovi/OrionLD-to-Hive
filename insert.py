@@ -7,8 +7,8 @@ import random
 
 HBASE_HOST = "localhost"
 COLUMN_FAMILY = "cf"
-TARGET_DIR = "./Measurements"  # <-- CAMBIA QUI
-LOAD_PERCENTAGE = 0.5  # <-- CAMBIA QUI (es: 0.25 per 25%)
+TARGET_DIR = "./Measurements"
+LOAD_PERCENTAGE = 0.5
 
 ENTITY_MAPPING = {
     "Room1": "room1_data",
