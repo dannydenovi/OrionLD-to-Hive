@@ -10,9 +10,9 @@ from collections import defaultdict
 
 app = Flask(__name__)
 
-ORION_LD_HOST = "http://192.168.1.23:1026"
+ORION_LD_HOST = "http://127.0.0.1:1026"
 SUBS_URL = f"{ORION_LD_HOST}/ngsi-ld/v1/subscriptions"
-CALLBACK = "http://192.168.1.27:8000/notify"
+CALLBACK = "http://172.16.6.62:8000/notify"
 SUB_ID = "urn:ngsi-ld:Subscription:KitchenUpdates"
 
 HBASE_HOST = "localhost"

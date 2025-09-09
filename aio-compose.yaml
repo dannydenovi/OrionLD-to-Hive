@@ -1,0 +1,24 @@
+services:
+  mongo:
+    image: mongo:4.4
+    command: --nojournal
+
+  orion:
+    image: fiware/orion-ld
+    depends_on:
+      - mongo
+    ports:
+      - "1026:1026"  # Fiware API Port
+    command: -dbhost mongo
+
+  hbase-hive:
+    image: dannydenovi/hive-hbase-standalone:latest
+    depends_on:
+      - orion
+    ports:
+      - "10000:10000" # HiveServer2 JDBC/Thrift Endpoint
+      - "9090:9090"   # HBase Thrift 
+      - "16010:16010" # Hbase Web UI
+
+
+
